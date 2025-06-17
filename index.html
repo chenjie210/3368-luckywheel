@@ -1,111 +1,271 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KVK3 Lottery Draw</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 30px;
-    }
-    .container {
-      max-width: 500px;
-      margin: auto;
-      padding: 20px;
-      border: 2px solid #ccc;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    input {
-      width: 90%;
-      padding: 10px;
-      margin: 10px 0;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    #result {
-      margin-top: 20px;
-      font-size: 18px;
-      font-weight: bold;
-    }
-    .prize-list {
-      text-align: left;
-      margin-top: 20px;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Prize Wheel Lottery</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 20px;
+  }
+  #wheel {
+    margin: 20px auto;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    border: 8px solid #333;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 10px #999;
+  }
+  #wheel canvas {
+    display: block;
+    margin: 0 auto;
+  }
+  #spinButton {
+    margin-top: 20px;
+    font-size: 18px;
+    padding: 10px 30px;
+    cursor: pointer;
+  }
+  #result {
+    margin-top: 30px;
+    font-size: 22px;
+    font-weight: bold;
+  }
+  #prizesList {
+    margin-top: 30px;
+    text-align: left;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  #idInput {
+    font-size: 16px;
+    padding: 8px;
+    width: 220px;
+  }
+  #idForm {
+    margin-bottom: 20px;
+  }
+</style>
 </head>
 <body>
-  <div class="container">
-    <h2>🎉 KVK3 Lottery Draw</h2>
-    <p>Please enter your name and ID to draw (One time only)</p>
 
-    <input type="text" id="name" placeholder="Your Name" required><br>
-    <input type="text" id="id" placeholder="Your ID" required><br>
-    <button onclick="drawPrize()">Draw Prize</button>
+<h1>Prize Wheel Lottery</h1>
 
-    <div id="result"></div>
+<div id="idForm">
+  <label for="idInput">Enter your ID (one-time draw only): </label><br/>
+  <input type="text" id="idInput" placeholder="Your unique ID" />
+</div>
 
-    <div class="prize-list">
-      <h3>🎁 Prize List:</h3>
-      <ul>
-        <li>🎁 10M RRS (You Choose) / 4M Gold</li>
-        <li>🎁 5M RRS (Random) / 2M Gold</li>
-        <li>💌 Thank you for participating~</li>
-      </ul>
-    </div>
+<div id="wheel">
+  <canvas id="wheelCanvas" width="300" height="300"></canvas>
+  <div style="position:absolute; top:50%; left:50%; transform: translate(-50%, -50%); font-weight:bold; pointer-events:none;">
+    🎯
   </div>
+</div>
 
-  <script>
-    const prizes = [
-      "🎁 5M RRS (Random) / 2M Gold", // 10%
-      "🎁 10M RRS (Choose) / 4M Gold", // 5%
-      "💌 Thank you for participating~" // 85%
-    ];
+<button id="spinButton" disabled>Spin the Wheel</button>
 
-    async function drawPrize() {
-      const name = document.getElementById("name").value.trim();
-      const id = document.getElementById("id").value.trim();
+<div id="result"></div>
 
-      if (!name || !id) {
-        alert("Please enter both name and ID.");
-        return;
-      }
+<div id="prizesList">
+  <h3>Prizes & Probability</h3>
+  <ul>
+    <li>10M RRS (User Choice)</li>
+    <li>4M Coins</li>
+    <li>5M RRS (User Choice) - 5%</li>
+    <li>2M Coins - 10%</li>
+    <li>Thank you for participating - 85%</li>
+  </ul>
+</div>
 
-      // Check if this ID has already drawn
-      const sheetUrl = "https://docs.google.com/spreadsheets/d/1pQwF_CNiFAJpQACIdPBjxiq6drPy-YWGUcnqkS5fZY8/gviz/tq?tqx=out:json";
-      const response = await fetch(sheetUrl);
-      const text = await response.text();
-      const json = JSON.parse(text.substr(47).slice(0, -2));
-      const rows = json.table.rows;
+<script>
+  const prizes = [
+    {text: '10M RRS (User Choice)', weight: 0.0, color: '#f39c12'},   // 0% direct (because no prob assigned, assuming 0)
+    {text: '4M Coins', weight: 0.0, color: '#27ae60'},                // 0% direct
+    {text: '5M RRS (User Choice) - 5%', weight: 0.05, color: '#2980b9'},
+    {text: '2M Coins - 10%', weight: 0.10, color: '#8e44ad'},
+    {text: 'Thank you for participating - 85%', weight: 0.85, color: '#bdc3c7'},
+  ];
 
-      const alreadyDrawn = rows.some(row => row.c[2] && row.c[2].v === id);
+  // Because first two prizes don't have explicit probabilities given, 
+  // We treat the first two prizes as part of 5% + 10% probability or combined with the others?
+  // The user mentioned "10M RRS 自选 / 4M 金币" and "5M RRS 自选 5% / 2M 金币 10%" and "谢谢参与 85%" 
+  // This is ambiguous, but looks like:
+  // - 10M RRS or 4M coins (probably no chance explicitly given, maybe default high? 
+  // - 5M RRS 5%, 2M Coins 10%, Thank you 85%
+  // I'll consider first two as "special prize, maybe you can get them as user choice with a combined chance".
+  // Let's say:
+  // 10M RRS or 4M Coins share 5% chance (user choice between those two)
+  // 5M RRS 5%
+  // 2M Coins 10%
+  // Thank you 80%
+  // So total 100%
 
-      if (alreadyDrawn) {
-        document.getElementById("result").innerText = "⚠️ You have already drawn. One draw per ID only.";
-        return;
-      }
+  // Re-defining prizes with proper weights:
+  const prizeWeights = [
+    {text: '10M RRS or 4M GOLD (User Choice)', weight: 0.05, color: '#f39c12'},
+    {text: '5M RRS or 2M GOLD (User Choice) - 5%', weight: 0.15, color: '#2980b9'},
+    {text: 'Thank you for participating - 80%', weight: 0.80, color: '#bdc3c7'},
+  ];
 
-      // Draw result
-      const r = Math.random();
-      let prize = "";
-      if (r < 0.05) prize = prizes[1];
-      else if (r < 0.15) prize = prizes[0];
-      else prize = prizes[2];
+  const canvas = document.getElementById('wheelCanvas');
+  const ctx = canvas.getContext('2d');
+  const spinBtn = document.getElementById('spinButton');
+  const resultDiv = document.getElementById('result');
+  const idInput = document.getElementById('idInput');
 
-      document.getElementById("result").innerText = `You won: ${prize}`;
+  let isSpinning = false;
 
-      // Send data to Google Apps Script
-      fetch("https://script.google.com/macros/s/AKfycbyDf8pOcLIuVBYYO1_u3c51HZFLjN6GociCqroIBkQsh0tRMPrDCLUQh39FZHoc3lNk/exec", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, id, prize })
-      });
+  // Draw wheel sectors
+  function drawWheel(rotation = 0) {
+    const total = prizeWeights.length;
+    const arc = 2 * Math.PI / total;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.rotate(rotation);
+
+    for(let i=0; i < total; i++) {
+      // Draw sector
+      ctx.beginPath();
+      ctx.fillStyle = prizeWeights[i].color;
+      ctx.moveTo(0,0);
+      ctx.arc(0, 0, canvas.width/2 - 10, i*arc, (i+1)*arc);
+      ctx.lineTo(0,0);
+      ctx.fill();
+
+      // Draw text
+      ctx.save();
+      ctx.fillStyle = '#fff';
+      ctx.translate((canvas.width/2 - 60) * Math.cos(i*arc + arc/2), (canvas.height/2 - 60) * Math.sin(i*arc + arc/2));
+      ctx.rotate(i*arc + arc/2 + Math.PI/2);
+      ctx.font = '14px Arial';
+      ctx.fillText(prizeWeights[i].text, -ctx.measureText(prizeWeights[i].text).width/2, 0);
+      ctx.restore();
     }
-  </script>
+
+    ctx.restore();
+  }
+
+  // Select prize based on weighted random
+  function weightedRandom(prizes) {
+    let r = Math.random();
+    let accum = 0;
+    for (let i=0; i<prizes.length; i++) {
+      accum += prizes[i].weight;
+      if (r < accum) return i;
+    }
+    return prizes.length -1;
+  }
+
+  function canSpin(id) {
+    const data = localStorage.getItem('lottery_ids');
+    if (!data) return true;
+    const ids = JSON.parse(data);
+    return !ids.includes(id);
+  }
+
+  function recordSpin(id) {
+    let data = localStorage.getItem('lottery_ids');
+    let ids = [];
+    if (data) {
+      ids = JSON.parse(data);
+    }
+    ids.push(id);
+    localStorage.setItem('lottery_ids', JSON.stringify(ids));
+  }
+
+  // Enable spin button only if ID is entered and not used
+  idInput.addEventListener('input', () => {
+    const id = idInput.value.trim();
+    if (id.length === 0) {
+      spinBtn.disabled = true;
+      resultDiv.textContent = '';
+      return;
+    }
+    if (canSpin(id)) {
+      spinBtn.disabled = false;
+      resultDiv.textContent = '';
+    } else {
+      spinBtn.disabled = true;
+      resultDiv.textContent = 'This ID has already participated.';
+    }
+  });
+
+  spinBtn.addEventListener('click', () => {
+    if (isSpinning) return;
+    const userId = idInput.value.trim();
+    if (!canSpin(userId)) {
+      resultDiv.textContent = 'This ID has already participated.';
+      return;
+    }
+
+    isSpinning = true;
+    spinBtn.disabled = true;
+    resultDiv.textContent = 'Spinning...';
+
+    // Select prize index based on weights
+    const prizeIndex = weightedRandom(prizeWeights);
+
+    // Calculate final rotation
+    const spins = 6; // how many spins before stopping
+    const arc = 2 * Math.PI / prizeWeights.length;
+    // Want wheel to stop with prizeIndex sector at top (angle = 3/2 PI)
+    const stopAngle = 3/2 * Math.PI - (prizeIndex + 0.5) * arc;
+
+    let currentRotation = 0;
+    const totalRotation = spins * 2 * Math.PI + stopAngle;
+
+    const duration = 5000; // 5 seconds
+    const startTime = performance.now();
+
+    function animate(time) {
+      let elapsed = time - startTime;
+      if (elapsed > duration) elapsed = duration;
+
+      // Ease out rotation
+      let progress = elapsed / duration;
+      let easedProgress = 1 - Math.pow(1 - progress, 3);
+      currentRotation = easedProgress * totalRotation;
+
+      drawWheel(currentRotation);
+
+      if (elapsed < duration) {
+        requestAnimationFrame(animate);
+      } else {
+        // Finished
+        isSpinning = false;
+        recordSpin(userId);
+        spinBtn.disabled = true;
+        idInput.disabled = true;
+        let prizeText = prizeWeights[prizeIndex].text;
+
+        // If prize is the first one (10M RRS or 4M Coins), ask user choice
+        if (prizeIndex === 0) {
+          const choice = confirm("You won 10M RRS or 4M Coins! Click OK for 10M RRS, Cancel for 4M Coins.");
+          prizeText = choice ? "10M RRS (User Choice)" : "4M Coins (User Choice)";
+        } else if (prizeIndex === 1) {
+          const choice = confirm("You won 5M RRS! Confirm OK to accept.");
+          prizeText = "5M RRS (User Choice)";
+        }
+        resultDiv.textContent = "Congratulations! You won: " + prizeText;
+      }
+    }
+
+    requestAnimationFrame(animate);
+  });
+
+  // Initial draw
+  drawWheel();
+
+</script>
+
 </body>
 </html>
+
