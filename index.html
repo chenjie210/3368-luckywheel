@@ -1,131 +1,130 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>Lucky Draw</title>
+  <title>抽奖轮盘 Lottery Wheel</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      background: #f8f9fa;
-      margin: 0;
-      padding: 0;
+      background: #f5f5f5;
+      padding: 40px;
     }
-    #wheelCanvas {
-      margin-top: 20px;
+    #wheel {
+      width: 400px;
+      height: 400px;
+      margin: 0 auto;
+      position: relative;
     }
     #pointer {
-      position: absolute;
-      top: 155px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
+      width: 0; 
+      height: 0; 
       border-left: 20px solid transparent;
       border-right: 20px solid transparent;
-      border-bottom: 30px solid red;
+      border-bottom: 40px solid red;
+      position: absolute;
+      top: 180px;
+      left: 180px;
       z-index: 10;
     }
-    .container {
-      margin-top: 50px;
-    }
-    input, button {
-      padding: 10px;
-      margin: 5px;
-      font-size: 16px;
+    canvas {
+      transform: rotate(-90deg);
     }
     #result {
       margin-top: 20px;
-      font-size: 18px;
-      font-weight: bold;
+      font-size: 1.2em;
+    }
+    input, button {
+      margin-top: 10px;
+      padding: 10px;
+      font-size: 1em;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Lucky Draw</h1>
-    <input type="text" id="userId" placeholder="Enter your ID">
-    <button onclick="spinWheel()">Spin</button>
-    <canvas id="wheelCanvas" width="300" height="300"></canvas>
+  <h1>抽奖轮盘 / Lottery Wheel</h1>
+  <p>请输入你的 ID / Enter your ID</p>
+  <input type="text" id="userId" placeholder="Your ID">
+  <button onclick="spinWheel()">抽奖 / Spin</button>
+
+  <div id="wheel">
     <div id="pointer"></div>
-    <div id="result"></div>
+    <canvas id="wheelCanvas" width="400" height="400"></canvas>
   </div>
 
-  <script>
-    const canvas = document.getElementById('wheelCanvas');
-    const ctx = canvas.getContext('2d');
-    const resultDiv = document.getElementById('result');
-    const userResults = {};
+  <div id="result"></div>
 
+  <script>
     const prizes = [
-      { label: '10M RRS', full: '10M RRS 自选 或 4M 金币', weight: 5 },
-      { label: '5M RRS', full: '5M RRS 自选 或 2M 金币', weight: 10 },
-      { label: 'Thanks', full: '谢谢参与', weight: 85 }
+      { text: "10M RRS", full: "10M RRS 自选 或 4M 金币 / or 4M Gold", weight: 5 },
+      { text: "5M RRS", full: "5M RRS 自选 或 2M 金币 / or 2M Gold", weight: 10 },
+      { text: "谢谢参与", full: "谢谢参与 / Thank you for participating", weight: 85 }
     ];
 
-    const totalWeight = prizes.reduce((sum, prize) => sum + prize.weight, 0);
-    const angles = prizes.map(p => (p.weight / totalWeight) * 2 * Math.PI);
+    const prizeMap = {};
+
+    const canvas = document.getElementById('wheelCanvas');
+    const ctx = canvas.getContext('2d');
+    const radius = canvas.width / 2;
+    const center = { x: radius, y: radius };
 
     function drawWheel() {
-      let startAngle = 0;
-      prizes.forEach((prize, i) => {
-        const angle = angles[i];
+      const total = prizes.length;
+      const colors = ["#ffcc00", "#66ccff", "#cccccc"];
+
+      for (let i = 0; i < total; i++) {
+        const angle = (2 * Math.PI / total);
         ctx.beginPath();
-        ctx.moveTo(150, 150);
-        ctx.arc(150, 150, 150, startAngle, startAngle + angle);
-        ctx.fillStyle = i % 2 === 0 ? '#FFDD57' : '#4BC0C0';
+        ctx.moveTo(center.x, center.y);
+        ctx.arc(center.x, center.y, radius, angle * i, angle * (i + 1));
+        ctx.fillStyle = colors[i % colors.length];
         ctx.fill();
         ctx.save();
-        ctx.translate(150, 150);
-        ctx.rotate(startAngle + angle / 2);
-        ctx.textAlign = 'right';
-        ctx.fillStyle = '#333';
-        ctx.font = 'bold 14px sans-serif';
-        ctx.fillText(prize.label, 130, 5);
+        ctx.translate(center.x, center.y);
+        ctx.rotate(angle * (i + 0.5));
+        ctx.textAlign = "right";
+        ctx.fillStyle = "black";
+        ctx.font = "bold 16px sans-serif";
+        ctx.fillText(prizes[i].text, radius - 10, 5);
         ctx.restore();
-        startAngle += angle;
-      });
+      }
     }
 
-    drawWheel();
+    function weightedRandom(prizes) {
+      const sum = prizes.reduce((a, b) => a + b.weight, 0);
+      let rand = Math.random() * sum;
+      for (let i = 0; i < prizes.length; i++) {
+        if (rand < prizes[i].weight) return i;
+        rand -= prizes[i].weight;
+      }
+      return prizes.length - 1;
+    }
 
     function spinWheel() {
       const userId = document.getElementById('userId').value.trim();
-      if (!userId) {
-        alert('Please enter your ID');
+      if (!userId) return alert("请输入你的 ID / Please enter your ID");
+
+      if (prizeMap[userId] !== undefined) {
+        showResult(prizeMap[userId]);
         return;
       }
 
-      if (userResults[userId]) {
-        resultDiv.innerText = `You have already drawn: ${userResults[userId].full}`;
-        return;
-      }
+      const index = weightedRandom(prizes);
+      prizeMap[userId] = index;
+      const rotation = 360 * 5 + (360 / prizes.length) * index + (360 / (2 * prizes.length));
+      canvas.style.transition = "transform 4s ease-out";
+      canvas.style.transform = `rotate(${rotation}deg)`;
 
-      let rand = Math.random() * 100;
-      let sum = 0;
-      let selectedPrize;
-      for (let i = 0; i < prizes.length; i++) {
-        sum += prizes[i].weight;
-        if (rand < sum) {
-          selectedPrize = prizes[i];
-          break;
-        }
-      }
-
-      const prizeIndex = prizes.indexOf(selectedPrize);
-      const anglePerSlice = 360 / prizes.length;
-      const randomOffset = Math.random() * anglePerSlice;
-      const targetAngle = 360 * 5 + (prizeIndex * anglePerSlice + randomOffset);
-
-      canvas.style.transition = 'transform 4s ease-out';
-      canvas.style.transform = `rotate(${targetAngle}deg)`;
-
-      setTimeout(() => {
-        userResults[userId] = selectedPrize;
-        resultDiv.innerText = `You won: ${selectedPrize.full}`;
-      }, 4000);
+      setTimeout(() => showResult(index), 4200);
     }
+
+    function showResult(index) {
+      document.getElementById('result').innerHTML =
+        `<p>结果 / Result: <strong>${prizes[index].text}</strong></p><p>${prizes[index].full}</p>`;
+    }
+
+    drawWheel();
   </script>
 </body>
 </html>
