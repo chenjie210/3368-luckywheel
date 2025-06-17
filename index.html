@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KVK3 Lottery Draw</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 30px;
+    }
+    .container {
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+      border: 2px solid #ccc;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input {
+      width: 90%;
+      padding: 10px;
+      margin: 10px 0;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #result {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🎉 KVK3 Lottery Draw</h2>
+    <p>Please enter your name and ID to draw</p>
+
+    <input type="text" id="name" placeholder="Your Name" required><br>
+    <input type="text" id="id" placeholder="Your ID" required><br>
+    <button onclick="drawPrize()">Draw Prize</button>
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+    const prizes = [
+      "🎁 5M RRS (Random) / 2M Gold", // 10%
+      "🎁 10M RRS (Choose) / 4M Gold", // 5%
+      "💌 Thank you for participating~" // 85%
+    ];
+
+    function drawPrize() {
+      const name = document.getElementById("name").value.trim();
+      const id = document.getElementById("id").value.trim();
+
+      if (!name || !id) {
+        alert("Please enter both name and ID.");
+        return;
+      }
+
+      // Random logic: 85% for Thank you, 10% for 5M, 5% for 10M
+      const r = Math.random();
+      let prize = "";
+      if (r < 0.05) prize = prizes[1];
+      else if (r < 0.15) prize = prizes[0];
+      else prize = prizes[2];
+
+      document.getElementById("result").innerText = `You won: ${prize}`;
+
+      // Send data to Google Apps Script
+      fetch("https://script.google.com/macros/s/AKfycbyDf8pOcLIuVBYYO1_u3c51HZFLjN6GociCqroIBkQsh0tRMPrDCLUQh39FZHoc3lNk/exec", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, id, prize })
+      });
+    }
+  </script>
+</body>
+</html>
