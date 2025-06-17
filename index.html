@@ -3,269 +3,327 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Prize Wheel Lottery</title>
+<title>Lucky Draw Wheel</title>
 <style>
   body {
     font-family: Arial, sans-serif;
-    text-align: center;
-    margin: 20px;
+    background: #f0f4f8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    min-height: 100vh;
+    margin: 0;
   }
-  #wheel {
-    margin: 20px auto;
-    width: 300px;
-    height: 300px;
-    border-radius: 50%;
-    border: 8px solid #333;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 0 10px #999;
+  h1 {
+    color: #333;
   }
-  #wheel canvas {
-    display: block;
-    margin: 0 auto;
+  #idInputContainer {
+    margin: 20px 0;
   }
-  #spinButton {
-    margin-top: 20px;
-    font-size: 18px;
-    padding: 10px 30px;
+  input[type="text"] {
+    padding: 10px;
+    font-size: 16px;
+    width: 220px;
+    border: 2px solid #333;
+    border-radius: 6px;
+  }
+  button {
+    padding: 10px 20px;
+    margin-left: 10px;
+    font-size: 16px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 6px;
     cursor: pointer;
+    transition: background 0.3s;
   }
+  button:disabled {
+    background: #aaa;
+    cursor: not-allowed;
+  }
+  button:hover:not(:disabled) {
+    background: #45a049;
+  }
+  #wheelContainer {
+    position: relative;
+    width: 350px;
+    height: 350px;
+    margin: 20px auto;
+  }
+  canvas#wheel {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  }
+  /* Stylish arrow */
+  #arrow {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; 
+    height: 0; 
+    border-left: 20px solid transparent;
+    border-right: 20px solid transparent;
+    border-bottom: 30px solid #e74c3c;
+    filter: drop-shadow(0 0 3px rgba(0,0,0,0.3));
+  }
+
   #result {
-    margin-top: 30px;
-    font-size: 22px;
-    font-weight: bold;
+    margin-top: 20px;
+    font-size: 20px;
+    color: #222;
+    min-height: 30px;
   }
+
   #prizesList {
     margin-top: 30px;
-    text-align: left;
-    max-width: 320px;
-    margin-left: auto;
-    margin-right: auto;
+    max-width: 350px;
+    background: white;
+    border-radius: 10px;
+    padding: 15px 20px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
   }
-  #idInput {
+
+  #prizesList h2 {
+    margin-top: 0;
+    text-align: center;
+    color: #444;
+  }
+
+  #prizesList ul {
+    list-style: none;
+    padding: 0;
+  }
+  #prizesList li {
+    padding: 8px 0;
+    border-bottom: 1px solid #ddd;
     font-size: 16px;
-    padding: 8px;
-    width: 220px;
+    color: #555;
   }
-  #idForm {
-    margin-bottom: 20px;
+  #prizesList li:last-child {
+    border-bottom: none;
   }
 </style>
 </head>
 <body>
-
-<h1>Prize Wheel Lottery</h1>
-
-<div id="idForm">
-  <label for="idInput">Enter your ID (one-time draw only): </label><br/>
-  <input type="text" id="idInput" placeholder="Your unique ID" />
-</div>
-
-<div id="wheel">
-  <canvas id="wheelCanvas" width="300" height="300"></canvas>
-  <div style="position:absolute; top:50%; left:50%; transform: translate(-50%, -50%); font-weight:bold; pointer-events:none;">
-    🎯
+  <h1>Lucky Draw Wheel</h1>
+  <div id="idInputContainer">
+    <input type="text" id="userId" placeholder="Enter your ID" />
+    <button id="spinBtn" disabled>Spin</button>
   </div>
-</div>
 
-<button id="spinButton" disabled>Spin the Wheel</button>
+  <div id="wheelContainer">
+    <div id="arrow"></div>
+    <canvas id="wheel" width="350" height="350"></canvas>
+  </div>
 
-<div id="result"></div>
+  <div id="result"></div>
 
-<div id="prizesList">
-  <h3>Prizes & Probability</h3>
-  <ul>
-    <li>10M RRS (User Choice)</li>
-    <li>4M Coins</li>
-    <li>5M RRS (User Choice) - 5%</li>
-    <li>2M Coins - 10%</li>
-    <li>Thank you for participating - 85%</li>
-  </ul>
-</div>
+  <div id="prizesList">
+    <h2>Prizes</h2>
+    <ul>
+      <li>10M RRS or 4M Coins</li>
+      <li>5M RRS or 2M Coins</li>
+      <li>Thank You for Participating</li>
+    </ul>
+  </div>
 
 <script>
-  const prizes = [
-    {text: '10M RRS (User Choice)', weight: 0.0, color: '#f39c12'},   // 0% direct (because no prob assigned, assuming 0)
-    {text: '4M Coins', weight: 0.0, color: '#27ae60'},                // 0% direct
-    {text: '5M RRS (User Choice) - 5%', weight: 0.05, color: '#2980b9'},
-    {text: '2M Coins - 10%', weight: 0.10, color: '#8e44ad'},
-    {text: 'Thank you for participating - 85%', weight: 0.85, color: '#bdc3c7'},
-  ];
-
-  // Because first two prizes don't have explicit probabilities given, 
-  // We treat the first two prizes as part of 5% + 10% probability or combined with the others?
-  // The user mentioned "10M RRS 自选 / 4M 金币" and "5M RRS 自选 5% / 2M 金币 10%" and "谢谢参与 85%" 
-  // This is ambiguous, but looks like:
-  // - 10M RRS or 4M coins (probably no chance explicitly given, maybe default high? 
-  // - 5M RRS 5%, 2M Coins 10%, Thank you 85%
-  // I'll consider first two as "special prize, maybe you can get them as user choice with a combined chance".
-  // Let's say:
-  // 10M RRS or 4M Coins share 5% chance (user choice between those two)
-  // 5M RRS 5%
-  // 2M Coins 10%
-  // Thank you 80%
-  // So total 100%
-
-  // Re-defining prizes with proper weights:
-  const prizeWeights = [
-    {text: '10M RRS or 4M GOLD (User Choice)', weight: 0.05, color: '#f39c12'},
-    {text: '5M RRS or 2M GOLD (User Choice) - 5%', weight: 0.15, color: '#2980b9'},
-    {text: 'Thank you for participating - 80%', weight: 0.80, color: '#bdc3c7'},
-  ];
-
-  const canvas = document.getElementById('wheelCanvas');
+  const canvas = document.getElementById('wheel');
   const ctx = canvas.getContext('2d');
-  const spinBtn = document.getElementById('spinButton');
+  const spinBtn = document.getElementById('spinBtn');
+  const userIdInput = document.getElementById('userId');
   const resultDiv = document.getElementById('result');
-  const idInput = document.getElementById('idInput');
 
-  let isSpinning = false;
+  // Prizes info
+  const segments = [
+    { text: "10M RRS or 4M Coins", color: "#f39c12" },   // 5%
+    { text: "5M RRS or 2M Coins", color: "#27ae60" },    // 10%
+    { text: "Thank You for Participating", color: "#7f8c8d" } // 85%
+  ];
 
-  // Draw wheel sectors
+  // Probability mapping for 100 scale
+  // 0-4: prize1 (5%)
+  // 5-14: prize2 (10%)
+  // 15-99: prize3 (85%)
+  // We'll map this to wheel slices accordingly
+
+  // To make wheel segments proportional, let's divide the wheel accordingly:
+  // 5% slice, 10% slice, 85% slice
+  // Angles: 360*0.05=18deg, 360*0.10=36deg, 360*0.85=306deg
+
+  // So segments:
+  // Segment 0: 18deg
+  // Segment 1: 36deg
+  // Segment 2: 306deg
+
+  // Store cumulative angles for logic
+  const angles = [18, 36, 306];
+
+  // Total segments count = 3
+
+  let startAngles = [];
+  let currentAngle = 0;
+  for(let a of angles) {
+    startAngles.push(currentAngle);
+    currentAngle += a;
+  }
+
+  // Draw wheel
   function drawWheel(rotation = 0) {
-    const total = prizeWeights.length;
-    const arc = 2 * Math.PI / total;
-
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const radius = Math.min(cx, cy) - 10;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-    ctx.translate(canvas.width/2, canvas.height/2);
-    ctx.rotate(rotation);
 
-    for(let i=0; i < total; i++) {
-      // Draw sector
+    for(let i=0; i < segments.length; i++) {
+      const startAngle = (startAngles[i] + rotation) * Math.PI / 180;
+      const endAngle = (startAngles[i] + angles[i] + rotation) * Math.PI / 180;
+      // Draw slice
       ctx.beginPath();
-      ctx.fillStyle = prizeWeights[i].color;
-      ctx.moveTo(0,0);
-      ctx.arc(0, 0, canvas.width/2 - 10, i*arc, (i+1)*arc);
-      ctx.lineTo(0,0);
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radius, startAngle, endAngle);
+      ctx.closePath();
+      ctx.fillStyle = segments[i].color;
       ctx.fill();
 
-      // Draw text
+      // Draw text along the middle of the slice
       ctx.save();
-      ctx.fillStyle = '#fff';
-      ctx.translate((canvas.width/2 - 60) * Math.cos(i*arc + arc/2), (canvas.height/2 - 60) * Math.sin(i*arc + arc/2));
-      ctx.rotate(i*arc + arc/2 + Math.PI/2);
-      ctx.font = '14px Arial';
-      ctx.fillText(prizeWeights[i].text, -ctx.measureText(prizeWeights[i].text).width/2, 0);
+      ctx.fillStyle = "white";
+      ctx.translate(cx, cy);
+      const midAngle = (startAngles[i] + angles[i]/2 + rotation) * Math.PI / 180;
+      ctx.rotate(midAngle);
+      ctx.textAlign = "right";
+      ctx.font = "bold 16px Arial";
+      ctx.fillText(segments[i].text, radius - 10, 10);
       ctx.restore();
     }
-
-    ctx.restore();
   }
 
-  // Select prize based on weighted random
-  function weightedRandom(prizes) {
-    let r = Math.random();
-    let accum = 0;
-    for (let i=0; i<prizes.length; i++) {
-      accum += prizes[i].weight;
-      if (r < accum) return i;
+  drawWheel(0);
+
+  // LocalStorage key prefix
+  const LS_KEY = 'luckyDrawSpunIds';
+
+  // Load spun IDs from localStorage
+  function loadSpunIds() {
+    const data = localStorage.getItem(LS_KEY);
+    if(data) {
+      try {
+        return JSON.parse(data);
+      } catch {
+        return [];
+      }
     }
-    return prizes.length -1;
+    return [];
   }
 
-  function canSpin(id) {
-    const data = localStorage.getItem('lottery_ids');
-    if (!data) return true;
-    const ids = JSON.parse(data);
-    return !ids.includes(id);
+  // Save spun IDs
+  function saveSpunIds(ids) {
+    localStorage.setItem(LS_KEY, JSON.stringify(ids));
   }
 
-  function recordSpin(id) {
-    let data = localStorage.getItem('lottery_ids');
-    let ids = [];
-    if (data) {
-      ids = JSON.parse(data);
-    }
+  // Check if ID has spun
+  function hasSpun(id) {
+    const ids = loadSpunIds();
+    return ids.includes(id);
+  }
+
+  // Add ID to spun list
+  function addSpun(id) {
+    const ids = loadSpunIds();
     ids.push(id);
-    localStorage.setItem('lottery_ids', JSON.stringify(ids));
+    saveSpunIds(ids);
   }
 
-  // Enable spin button only if ID is entered and not used
-  idInput.addEventListener('input', () => {
-    const id = idInput.value.trim();
-    if (id.length === 0) {
-      spinBtn.disabled = true;
-      resultDiv.textContent = '';
-      return;
-    }
-    if (canSpin(id)) {
+  // Enable or disable spin button depending on input
+  userIdInput.addEventListener('input', () => {
+    const id = userIdInput.value.trim();
+    if(id.length > 0 && !hasSpun(id)) {
       spinBtn.disabled = false;
-      resultDiv.textContent = '';
+      resultDiv.textContent = "";
+    } else if (hasSpun(id)) {
+      spinBtn.disabled = true;
+      resultDiv.textContent = "This ID has already participated.";
     } else {
       spinBtn.disabled = true;
-      resultDiv.textContent = 'This ID has already participated.';
+      resultDiv.textContent = "";
     }
   });
 
-  spinBtn.addEventListener('click', () => {
-    if (isSpinning) return;
-    const userId = idInput.value.trim();
-    if (!canSpin(userId)) {
-      resultDiv.textContent = 'This ID has already participated.';
-      return;
-    }
+  // Spin logic variables
+  let isSpinning = false;
+  let rotation = 0;
+
+  // Function to pick prize based on probability
+  function pickPrize() {
+    const rand = Math.random() * 100;
+    if(rand < 5) return 0;        // 5%
+    else if(rand < 15) return 1;  // next 10%
+    else return 2;                // 85%
+  }
+
+  // Calculate final rotation angle to land prize at arrow (top)
+  function getRotationForPrize(prizeIndex) {
+    // Arrow is at 0 degrees (top)
+    // We want the prize slice middle to be aligned at 0 deg
+    // So rotation angle = 360 - (startAngle + sliceAngle/2)
+    const prizeMidAngle = startAngles[prizeIndex] + angles[prizeIndex] / 2;
+    return (360 * 5) + (360 - prizeMidAngle); // 5 full rotations + final align
+  }
+
+  function animateSpin(targetRotation, duration=4000) {
+    return new Promise(resolve => {
+      const start = performance.now();
+      const initialRotation = rotation % 360;
+
+      function animate(time) {
+        const elapsed = time - start;
+        if(elapsed < duration) {
+          // Ease out cubic
+          const t = elapsed / duration;
+          const easedT = 1 - Math.pow(1 - t, 3);
+          rotation = initialRotation + easedT * (targetRotation - initialRotation);
+          drawWheel(rotation % 360);
+          requestAnimationFrame(animate);
+        } else {
+          rotation = targetRotation % 360;
+          drawWheel(rotation);
+          resolve();
+        }
+      }
+      requestAnimationFrame(animate);
+    });
+  }
+
+  spinBtn.addEventListener('click', async () => {
+    if(isSpinning) return;
+    const id = userIdInput.value.trim();
+    if(!id || hasSpun(id)) return;
 
     isSpinning = true;
     spinBtn.disabled = true;
-    resultDiv.textContent = 'Spinning...';
+    resultDiv.textContent = "Spinning...";
 
-    // Select prize index based on weights
-    const prizeIndex = weightedRandom(prizeWeights);
+    const prizeIndex = pickPrize();
+    const finalRotation = getRotationForPrize(prizeIndex);
 
-    // Calculate final rotation
-    const spins = 6; // how many spins before stopping
-    const arc = 2 * Math.PI / prizeWeights.length;
-    // Want wheel to stop with prizeIndex sector at top (angle = 3/2 PI)
-    const stopAngle = 3/2 * Math.PI - (prizeIndex + 0.5) * arc;
+    await animateSpin(finalRotation, 4000);
 
-    let currentRotation = 0;
-    const totalRotation = spins * 2 * Math.PI + stopAngle;
+    addSpun(id);
 
-    const duration = 5000; // 5 seconds
-    const startTime = performance.now();
+    let prizeText = segments[prizeIndex].text;
 
-    function animate(time) {
-      let elapsed = time - startTime;
-      if (elapsed > duration) elapsed = duration;
+    resultDiv.textContent = `Congrats! You won: ${prizeText}`;
 
-      // Ease out rotation
-      let progress = elapsed / duration;
-      let easedProgress = 1 - Math.pow(1 - progress, 3);
-      currentRotation = easedProgress * totalRotation;
-
-      drawWheel(currentRotation);
-
-      if (elapsed < duration) {
-        requestAnimationFrame(animate);
-      } else {
-        // Finished
-        isSpinning = false;
-        recordSpin(userId);
-        spinBtn.disabled = true;
-        idInput.disabled = true;
-        let prizeText = prizeWeights[prizeIndex].text;
-
-        // If prize is the first one (10M RRS or 4M Coins), ask user choice
-        if (prizeIndex === 0) {
-          const choice = confirm("You won 10M RRS or 4M Coins! Click OK for 10M RRS, Cancel for 4M Coins.");
-          prizeText = choice ? "10M RRS (User Choice)" : "4M Coins (User Choice)";
-        } else if (prizeIndex === 1) {
-          const choice = confirm("You won 5M RRS! Confirm OK to accept.");
-          prizeText = "5M RRS (User Choice)";
-        }
-        resultDiv.textContent = "Congratulations! You won: " + prizeText;
-      }
-    }
-
-    requestAnimationFrame(animate);
+    isSpinning = false;
+    spinBtn.disabled = true;
   });
-
-  // Initial draw
-  drawWheel();
-
 </script>
 
 </body>
 </html>
-
