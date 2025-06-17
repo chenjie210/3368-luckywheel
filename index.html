@@ -11,7 +11,7 @@
       padding: 30px;
     }
     .container {
-      max-width: 400px;
+      max-width: 500px;
       margin: auto;
       padding: 20px;
       border: 2px solid #ccc;
@@ -33,18 +33,31 @@
       font-size: 18px;
       font-weight: bold;
     }
+    .prize-list {
+      text-align: left;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>🎉 KVK3 Lottery Draw</h2>
-    <p>Please enter your name and ID to draw</p>
+    <p>Please enter your name and ID to draw (One time only)</p>
 
     <input type="text" id="name" placeholder="Your Name" required><br>
     <input type="text" id="id" placeholder="Your ID" required><br>
     <button onclick="drawPrize()">Draw Prize</button>
 
     <div id="result"></div>
+
+    <div class="prize-list">
+      <h3>🎁 Prize List:</h3>
+      <ul>
+        <li>🎁 10M RRS (You Choose) / 4M Gold</li>
+        <li>🎁 5M RRS (Random) / 2M Gold</li>
+        <li>💌 Thank you for participating~</li>
+      </ul>
+    </div>
   </div>
 
   <script>
@@ -54,7 +67,7 @@
       "💌 Thank you for participating~" // 85%
     ];
 
-    function drawPrize() {
+    async function drawPrize() {
       const name = document.getElementById("name").value.trim();
       const id = document.getElementById("id").value.trim();
 
@@ -63,7 +76,21 @@
         return;
       }
 
-      // Random logic: 85% for Thank you, 10% for 5M, 5% for 10M
+      // Check if this ID has already drawn
+      const sheetUrl = "https://docs.google.com/spreadsheets/d/1pQwF_CNiFAJpQACIdPBjxiq6drPy-YWGUcnqkS5fZY8/gviz/tq?tqx=out:json";
+      const response = await fetch(sheetUrl);
+      const text = await response.text();
+      const json = JSON.parse(text.substr(47).slice(0, -2));
+      const rows = json.table.rows;
+
+      const alreadyDrawn = rows.some(row => row.c[2] && row.c[2].v === id);
+
+      if (alreadyDrawn) {
+        document.getElementById("result").innerText = "⚠️ You have already drawn. One draw per ID only.";
+        return;
+      }
+
+      // Draw result
       const r = Math.random();
       let prize = "";
       if (r < 0.05) prize = prizes[1];
